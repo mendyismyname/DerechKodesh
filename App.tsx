@@ -18,7 +18,7 @@ import {
     ChevronDown, Search, Gavel, FileText, Network, Sparkles, Workflow, ExternalLink, Video,
     Play, Pause, Volume2, SkipForward, SkipBack, Maximize2, User
 } from 'lucide-react';
-import { explainConcept, generateComparison, generateSugyaDeepData } from './services/geminiService';
+import { explainConcept, generateSugyaDeepData } from './services/geminiService';
 
 const App: React.FC = () => {
   // --- STATE ---
@@ -42,7 +42,7 @@ const App: React.FC = () => {
   const [sidebarTab, setSidebarTab] = useState<'OUTLINE' | 'CONCEPTS'>('OUTLINE');
   
   // Resize State
-  const [panelHeight, setPanelHeight] = useState(400); // Initial height in px
+  const [panelHeight, setPanelHeight] = useState(400); 
   const isDraggingPanel = useRef(false);
 
   // Media Player State
@@ -61,6 +61,10 @@ const App: React.FC = () => {
   // --- MEDIA PLAYER LOGIC ---
   useEffect(() => {
     if (currentSugya.resources?.hlsUrl && videoRef.current) {
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+      }
+      
       if (Hls.isSupported()) {
         const hls = new Hls();
         hls.loadSource(currentSugya.resources.hlsUrl);
@@ -70,13 +74,7 @@ const App: React.FC = () => {
         videoRef.current.src = currentSugya.resources.hlsUrl;
       }
     }
-    return () => {
-      if (hlsRef.current) {
-        hlsRef.current.destroy();
-        hlsRef.current = null;
-      }
-    };
-  }, [currentSugya]);
+  }, [currentSugya.resources?.hlsUrl]);
 
   const handlePlayPause = () => {
     if (videoRef.current) {
@@ -107,6 +105,7 @@ const App: React.FC = () => {
   };
 
   const formatTime = (time: number) => {
+    if (isNaN(time)) return '0:00';
     const mins = Math.floor(time / 60);
     const secs = Math.floor(time % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
@@ -120,7 +119,7 @@ const App: React.FC = () => {
           setCurrentStage(StudyStage.INTRO);
           setSelectedNode(null);
           setActivePerspectiveId(null);
-          setActiveSource('CHUMASH'); // Start with Chumash by default
+          setActiveSource('CHUMASH');
           setIsSidebarOpen(true);
       }
   };
@@ -152,10 +151,6 @@ const App: React.FC = () => {
   const handleNodeSelect = (node: LogicNode) => {
       setSelectedNode(node);
       handleAddToWhiteboard(node);
-  };
-
-  const handleTzurasHadafAnalyze = (node: LogicNode) => {
-      setSelectedNode(node);
   };
 
   const handleScholarSelect = (stage: StudyStage, id: string) => {
@@ -206,7 +201,6 @@ const App: React.FC = () => {
       setIsGeneratingDeepData(false);
   }
 
-  // --- RESIZE HANDLERS ---
   const startResize = (e: React.MouseEvent) => {
       e.preventDefault();
       isDraggingPanel.current = true;
@@ -241,117 +235,6 @@ const App: React.FC = () => {
             ? currentSugya.achronimPerspectives.find(p => p.id === activePerspectiveId) || currentSugya.achronimPerspectives[0]
             : null;
 
-  // --- MENU RENDERER ---
-  const renderSidebarMenu = () => {
-      return (
-          <div className="space-y-6">
-              <div 
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all ${currentStage === StudyStage.INTRO ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
-                  onClick={() => setCurrentStage(StudyStage.INTRO)}
-              >
-                  <FileText size={16} />
-                  <span>Sugya Intro</span>
-              </div>
-              <div>
-                  <div 
-                      className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all mb-1 ${currentStage === StudyStage.SOURCE_TEXT ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
-                      onClick={() => {
-                          setCurrentStage(StudyStage.SOURCE_TEXT);
-                          if (activeSource !== 'CHUMASH' && activeSource !== 'MISHNA' && activeSource !== 'GEMARA') {
-                              setActiveSource('CHUMASH');
-                          }
-                      }}
-                  >
-                      <div className="flex items-center gap-3">
-                          <BookOpen size={16} />
-                          <span>Sources</span>
-                      </div>
-                      <ChevronDown size={14} className={`transition-transform ${currentStage === StudyStage.SOURCE_TEXT ? 'rotate-180' : ''}`} />
-                  </div>
-                  {currentStage === StudyStage.SOURCE_TEXT && (
-                      <div className="pl-9 space-y-1 animate-in slide-in-from-top-2 duration-200">
-                          <div onClick={() => handleSourceSelect('CHUMASH')} className={`text-sm py-1.5 px-2 rounded cursor-pointer transition-colors ${activeSource === 'CHUMASH' ? 'font-bold text-indigo-700 bg-indigo-100/50' : 'text-slate-500 hover:text-indigo-600'}`}>Chumash</div>
-                          <div onClick={() => handleSourceSelect('MISHNA')} className={`text-sm py-1.5 px-2 rounded cursor-pointer transition-colors ${activeSource === 'MISHNA' ? 'font-bold text-indigo-700 bg-indigo-100/50' : 'text-slate-500 hover:text-indigo-600'}`}>Mishna</div>
-                          <div onClick={() => handleSourceSelect('GEMARA')} className={`text-sm py-1.5 px-2 rounded cursor-pointer transition-colors ${activeSource === 'GEMARA' ? 'font-bold text-indigo-700 bg-indigo-100/50' : 'text-slate-500 hover:text-indigo-600'}`}>Gemara</div>
-                      </div>
-                  )}
-              </div>
-              <div>
-                  <div 
-                      className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all mb-1 ${currentStage === StudyStage.ANALYSIS ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
-                      onClick={() => setCurrentStage(StudyStage.ANALYSIS)}
-                  >
-                      <div className="flex items-center gap-3">
-                          <Search size={16} />
-                          <span>Analysis</span>
-                      </div>
-                      <ChevronDown size={14} className={`transition-transform ${currentStage === StudyStage.ANALYSIS ? 'rotate-180' : ''}`} />
-                  </div>
-                  {currentStage === StudyStage.ANALYSIS && (
-                      <div className="pl-9 space-y-1 animate-in slide-in-from-top-2 duration-200">
-                          <div onClick={() => handleAnalysisSelect('STRUCTURE')} className={`text-sm py-1.5 px-2 rounded cursor-pointer transition-colors flex items-center gap-2 ${analysisSection === 'STRUCTURE' ? 'font-bold text-indigo-700 bg-indigo-100/50' : 'text-slate-500 hover:text-indigo-600'}`}><Workflow size={12} />Structure</div>
-                          <div onClick={() => handleAnalysisSelect('LOGIC')} className={`text-sm py-1.5 px-2 rounded cursor-pointer transition-colors flex items-center gap-2 ${analysisSection === 'LOGIC' ? 'font-bold text-indigo-700 bg-indigo-100/50' : 'text-slate-500 hover:text-indigo-600'}`}><Network size={12} />Logic</div>
-                          <div onClick={() => handleAnalysisSelect('MELITZA')} className={`text-sm py-1.5 px-2 rounded cursor-pointer transition-colors flex items-center gap-2 ${analysisSection === 'MELITZA' ? 'font-bold text-indigo-700 bg-indigo-100/50' : 'text-slate-500 hover:text-indigo-600'}`}><Sparkles size={12} />Examples</div>
-                      </div>
-                  )}
-              </div>
-              <div>
-                  <div 
-                      className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all mb-1 ${currentStage === StudyStage.DEPTH_RISHONIM ? 'bg-indigo-50 text-indigo-900 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
-                      onClick={() => setCurrentStage(StudyStage.DEPTH_RISHONIM)}
-                  >
-                      <div className="flex items-center gap-3">
-                          <Book size={16} />
-                          <span>Rishonim</span>
-                      </div>
-                      <ChevronDown size={14} className={`transition-transform ${currentStage === StudyStage.DEPTH_RISHONIM ? 'rotate-180' : ''}`} />
-                  </div>
-                  {currentStage === StudyStage.DEPTH_RISHONIM && (
-                      <div className="pl-9 space-y-1 animate-in slide-in-from-top-2 duration-200">
-                          {currentSugya.perspectives.map(p => (
-                              <div key={p.id} onClick={() => handleScholarSelect(StudyStage.DEPTH_RISHONIM, p.id)} className={`text-sm py-1.5 px-2 rounded cursor-pointer transition-colors ${activePerspectiveId === p.id ? 'font-bold text-indigo-700 bg-indigo-100/50' : 'text-slate-500 hover:text-indigo-600'}`}>{p.scholarName}</div>
-                          ))}
-                      </div>
-                  )}
-              </div>
-              <div>
-                  <div 
-                      className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all mb-1 ${currentStage === StudyStage.DEPTH_ACHRONIM ? 'bg-purple-50 text-purple-900 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
-                      onClick={() => setCurrentStage(StudyStage.DEPTH_ACHRONIM)}
-                  >
-                      <div className="flex items-center gap-3">
-                          <Layers size={16} />
-                          <span>Achronim</span>
-                      </div>
-                      <ChevronDown size={14} className={`transition-transform ${currentStage === StudyStage.DEPTH_ACHRONIM ? 'rotate-180' : ''}`} />
-                  </div>
-                  {currentStage === StudyStage.DEPTH_ACHRONIM && (
-                      <div className="pl-9 space-y-1 animate-in slide-in-from-top-2 duration-200">
-                          {currentSugya.achronimPerspectives.map(p => (
-                              <div key={p.id} onClick={() => handleScholarSelect(StudyStage.DEPTH_ACHRONIM, p.id)} className={`text-sm py-1.5 px-2 rounded cursor-pointer transition-colors ${activePerspectiveId === p.id ? 'font-bold text-purple-700 bg-purple-100/50' : 'text-slate-500 hover:text-purple-600'}`}>{p.scholarName}</div>
-                          ))}
-                      </div>
-                  )}
-              </div>
-              <div 
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all ${currentStage === StudyStage.PSAK ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
-                  onClick={() => setCurrentStage(StudyStage.PSAK)}
-              >
-                  <Gavel size={16} />
-                  <span>Psak Halacha</span>
-              </div>
-          </div>
-      );
-  }
-
-  // --- MAIN RENDER ---
-
-  if (currentStage === StudyStage.SELECTOR) {
-      return (
-          <SugyaSelector onSelect={handleSwitchSugya} />
-      );
-  }
-
   return (
     <div className="flex h-screen w-screen overflow-hidden text-slate-800 font-sans bg-[#fdfbf7]">
       
@@ -382,36 +265,36 @@ const App: React.FC = () => {
                             <span className="text-[10px] font-bold uppercase tracking-wider">{viewMode === 'WHITEBOARD' ? 'Close Whiteboard' : 'Open Whiteboard'}</span>
                         </button>
                     </div>
-                    {renderSidebarMenu()}
+                    {/* Simplified Sidebar Menu */}
+                    <div className="space-y-4">
+                        <div onClick={() => setCurrentStage(StudyStage.INTRO)} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all ${currentStage === StudyStage.INTRO ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}><FileText size={16} /><span>Sugya Intro</span></div>
+                        <div onClick={() => setCurrentStage(StudyStage.SOURCE_TEXT)} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all ${currentStage === StudyStage.SOURCE_TEXT ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}><BookOpen size={16} /><span>Sources</span></div>
+                        <div onClick={() => setCurrentStage(StudyStage.ANALYSIS)} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all ${currentStage === StudyStage.ANALYSIS ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}><Search size={16} /><span>Analysis</span></div>
+                        <div onClick={() => setCurrentStage(StudyStage.DEPTH_RISHONIM)} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all ${currentStage === StudyStage.DEPTH_RISHONIM ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}><Book size={16} /><span>Rishonim</span></div>
+                        <div onClick={() => setCurrentStage(StudyStage.PSAK)} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all ${currentStage === StudyStage.PSAK ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}><Gavel size={16} /><span>Psak Halacha</span></div>
+                    </div>
                 </div>
             )}
             {sidebarTab === 'CONCEPTS' && (
                 <div className="space-y-4 animate-in fade-in duration-300">
-                     <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Global Dictionary</span>
-                        <Settings size={14} className="text-slate-300" />
-                    </div>
-                    {concepts.map(c => {
-                        const isExpanded = expandedConceptId === c.id;
-                        return (
-                            <div key={c.id} className="transition-all duration-300">
-                                <ConceptBadge concept={c} onClick={handleConceptClick} />
-                                {isExpanded && (
-                                    <div className="mt-2 p-3 bg-slate-50 rounded-lg border border-slate-200 animate-in slide-in-from-top-2 duration-200 shadow-inner">
-                                        <p className="text-xs text-slate-600 leading-relaxed mb-3">{c.description}</p>
-                                        <button onClick={() => handleConceptAi(c)} className="w-full py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold rounded flex items-center justify-center gap-2 transition-colors">
-                                            <BrainCircuit size={12} /> Explain Concept
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })}
+                    {concepts.map(c => (
+                        <div key={c.id}>
+                            <ConceptBadge concept={c} onClick={handleConceptClick} />
+                            {expandedConceptId === c.id && (
+                                <div className="mt-2 p-3 bg-slate-50 rounded-lg border border-slate-200 animate-in slide-in-from-top-2">
+                                    <p className="text-xs text-slate-600 leading-relaxed mb-3">{c.description}</p>
+                                    <button onClick={() => handleConceptAi(c)} className="w-full py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold rounded flex items-center justify-center gap-2">
+                                        <BrainCircuit size={12} /> Explain Concept
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    ))}
                 </div>
             )}
         </div>
         <div className="p-4 border-t border-slate-100 bg-slate-50/30">
-            <button onClick={handleReturnToLibrary} className="w-full flex items-center justify-center gap-2 text-slate-500 hover:text-slate-800 text-xs font-bold uppercase tracking-wider py-2 rounded-lg hover:bg-slate-100 transition-colors">
+            <button onClick={handleReturnToLibrary} className="w-full flex items-center justify-center gap-2 text-slate-500 hover:text-slate-800 text-xs font-bold uppercase py-2 rounded-lg hover:bg-slate-100">
                 <Home size={14} /> Library
             </button>
         </div>
@@ -420,7 +303,7 @@ const App: React.FC = () => {
       {/* MAIN CONTENT */}
       <main className="flex-1 flex flex-col relative transition-all duration-300 min-w-0 bg-[#fdfbf7] pb-24">
         <div className="absolute top-4 left-4 z-50 print:hidden">
-             <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 rounded-lg bg-white/80 backdrop-blur border border-slate-200 shadow-sm hover:bg-white text-slate-600 transition-colors">
+             <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 rounded-lg bg-white/80 backdrop-blur border border-slate-200 shadow-sm hover:bg-white text-slate-600">
                 {isSidebarOpen ? <SidebarClose size={20} /> : <SidebarOpen size={20} />}
             </button>
         </div>
@@ -428,36 +311,26 @@ const App: React.FC = () => {
         {viewMode === 'WHITEBOARD' ? (
              <Whiteboard sugya={currentSugya} onClose={() => setViewMode('LEARN')} />
         ) : (
-             <div className="flex-1 overflow-hidden flex flex-col bg-[#fdfbf7] relative">
-                <div 
-                    className={`flex-1 overflow-y-auto p-0 w-full scroll-smooth`}
-                    style={{ paddingBottom: selectedNode ? `${panelHeight}px` : '0px' }}
-                >
+             <div className="flex-1 overflow-hidden flex flex-col relative">
+                <div className="flex-1 overflow-y-auto p-0 w-full scroll-smooth" style={{ paddingBottom: selectedNode ? `${panelHeight}px` : '0px' }}>
                     {currentStage === StudyStage.INTRO && <ShearBlat onStart={() => { setCurrentStage(StudyStage.SOURCE_TEXT); setActiveSource('CHUMASH'); }} title={currentSugya.title} subtitle="Elucidated & Analyzed" resources={currentSugya.resources} />}
                     {currentStage === StudyStage.SOURCE_TEXT && <TzurasHadaf sugya={currentSugya} activeSource={activeSource} onAnalyze={handleNodeSelect} onSwitchSugya={handleSwitchSugya} availableSugyas={AVAILABLE_SUGYAS} />}
-                    {currentStage === StudyStage.ANALYSIS && <AnalysisDashboard sugya={currentSugya} section={analysisSection} onSelectNode={console.log} onGenerateAi={handleGenerateDeepData} isGenerating={isGeneratingDeepData} />}
+                    {currentStage === StudyStage.ANALYSIS && <AnalysisDashboard sugya={currentSugya} section={analysisSection} onSelectNode={() => {}} onGenerateAi={handleGenerateDeepData} isGenerating={isGeneratingDeepData} />}
                     {currentStage === StudyStage.PSAK && <PsakView chain={currentSugya.psakChain} data={currentSugya.shulchanAruch} />}
                     {(currentStage === StudyStage.DEPTH_RISHONIM || currentStage === StudyStage.DEPTH_ACHRONIM) && activeScholar && (
-                       <div className="h-full">
-                            <ScholarDepthView perspective={activeScholar} sourceText={currentSugya.baseText} category={currentStage === StudyStage.DEPTH_RISHONIM ? 'RISHONIM' : 'ACHRONIM'} onNavigate={handleScholarNavigation} onPlayTimestamp={jumpToTimestamp} />
-                       </div>
+                       <ScholarDepthView perspective={activeScholar} sourceText={currentSugya.baseText} category={currentStage === StudyStage.DEPTH_RISHONIM ? 'RISHONIM' : 'ACHRONIM'} onNavigate={handleScholarNavigation} onPlayTimestamp={jumpToTimestamp} />
                     )}
                 </div>
 
                 {selectedNode && (
                     <div className="fixed bottom-24 left-0 right-0 lg:left-80 bg-white border-t-2 border-slate-900 shadow-2xl z-40 flex flex-col" style={{ height: `${panelHeight}px` }}>
-                        <div className="h-3 w-full bg-slate-100 border-b border-slate-200 cursor-ns-resize flex items-center justify-center hover:bg-slate-200" onMouseDown={startResize}><GripHorizontal size={16} className="text-slate-400" /></div>
+                        <div className="h-3 w-full bg-slate-100 border-b border-slate-200 cursor-ns-resize flex items-center justify-center" onMouseDown={startResize}><GripHorizontal size={16} className="text-slate-400" /></div>
                         <div className="h-12 border-b border-slate-200 flex items-center justify-between px-6 bg-slate-50">
                              <div className="flex items-center gap-3">
                                 <div className="p-1.5 bg-slate-200 rounded text-slate-700"><ZoomIn size={16} /></div>
-                                <span className="font-bold text-slate-700 text-sm uppercase tracking-wide">Analysis & Detail</span>
-                                <div className="h-4 w-px bg-slate-300 mx-2"></div>
-                                <span className="text-xs font-bold text-indigo-600 uppercase bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">{selectedNode.type}</span>
+                                <span className="font-bold text-slate-700 text-sm uppercase">Analysis & Detail</span>
                                 {selectedNode.timestamp !== undefined && (
-                                    <button 
-                                        onClick={() => jumpToTimestamp(selectedNode.timestamp!)}
-                                        className="flex items-center gap-1.5 ml-4 px-3 py-1 bg-indigo-600 text-white rounded-full text-[10px] font-bold uppercase tracking-wider hover:bg-indigo-700 transition-colors"
-                                    >
+                                    <button onClick={() => jumpToTimestamp(selectedNode.timestamp!)} className="flex items-center gap-1.5 ml-4 px-3 py-1 bg-indigo-600 text-white rounded-full text-[10px] font-bold uppercase hover:bg-indigo-700 transition-colors">
                                         <Play size={10} fill="currentColor" /> Play in Shiur
                                     </button>
                                 )}
@@ -466,22 +339,13 @@ const App: React.FC = () => {
                         </div>
                         <div className="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-200">
                             <div className="p-6 overflow-y-auto bg-slate-50/30">
-                                <div className="text-[10px] font-bold text-slate-400 uppercase mb-3">Source Text</div>
-                                <h3 className="font-hebrew text-2xl mb-4 text-right leading-relaxed font-bold text-slate-900 border-r-4 border-slate-900 pr-4 py-1" dir="rtl">{selectedNode.hebrewText}</h3>
-                                <div className="text-[10px] font-bold text-slate-400 uppercase mb-2 mt-6">Translation</div>
+                                <h3 className="font-hebrew text-2xl mb-4 text-right font-bold text-slate-900 border-r-4 border-slate-900 pr-4 py-1" dir="rtl">{selectedNode.hebrewText}</h3>
                                 <p className="text-slate-700 leading-relaxed text-sm bg-white p-4 rounded-lg border border-slate-200 shadow-sm font-serif">{selectedNode.englishText}</p>
                             </div>
                             <div className="p-6 overflow-y-auto bg-white">
-                                <div className="text-[10px] font-bold text-slate-400 uppercase mb-4">Context & Concepts</div>
                                 <div className="grid grid-cols-2 gap-3 mb-6">
-                                    <div className="bg-slate-50 border border-slate-200 p-3 rounded-lg">
-                                        <div className="text-[10px] text-slate-400 uppercase font-bold mb-1">Speaker</div>
-                                        <div className="text-sm font-semibold text-slate-800">{selectedNode.speaker || selectedNode.era}</div>
-                                    </div>
-                                    <div className="bg-slate-50 border border-slate-200 p-3 rounded-lg">
-                                        <div className="text-[10px] text-slate-400 uppercase font-bold mb-1">Era</div>
-                                        <div className="text-sm font-semibold text-slate-800">{selectedNode.era}</div>
-                                    </div>
+                                    <div className="bg-slate-50 border border-slate-200 p-3 rounded-lg"><div className="text-[10px] text-slate-400 uppercase font-bold mb-1">Speaker</div><div className="text-sm font-semibold text-slate-800">{selectedNode.speaker || selectedNode.era}</div></div>
+                                    <div className="bg-slate-50 border border-slate-200 p-3 rounded-lg"><div className="text-[10px] text-slate-400 uppercase font-bold mb-1">Era</div><div className="text-sm font-semibold text-slate-800">{selectedNode.era}</div></div>
                                 </div>
                                 <div className="flex flex-wrap gap-2">
                                     {selectedNode.concepts.map(cId => {
@@ -491,24 +355,7 @@ const App: React.FC = () => {
                                 </div>
                             </div>
                             <div className="p-6 overflow-y-auto bg-slate-50/30 flex flex-col">
-                                <div className="flex-1">
-                                    {selectedNode.children.length > 0 && (
-                                        <>
-                                            <div className="text-[10px] font-bold text-slate-400 uppercase mb-3">Logical Flow</div>
-                                            <div className="pl-4 border-l-2 border-slate-200 space-y-2">
-                                                {selectedNode.children.map(child => (
-                                                    <div key={child.id} className="text-xs group cursor-pointer hover:bg-white p-2 rounded border border-transparent hover:border-slate-200">
-                                                        <span className="font-bold text-slate-700 block mb-1 flex items-center gap-2"><span className={`w-2 h-2 rounded-full ${child.type === 'QUESTION' ? 'bg-red-400' : 'bg-green-400'}`}></span>{child.type}</span>
-                                                        <span className="text-slate-500 line-clamp-2">{child.englishText}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                                <div className="pt-6 mt-auto border-t border-slate-200">
-                                     <button onClick={() => handleAddToWhiteboard(selectedNode)} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-900 text-white rounded-lg text-sm font-bold uppercase hover:bg-slate-800 transition-colors shadow-lg"><Map size={16} /> Add to Logic Map</button>
-                                </div>
+                                <button onClick={() => handleAddToWhiteboard(selectedNode)} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-900 text-white rounded-lg text-sm font-bold uppercase hover:bg-slate-800 shadow-lg"><Map size={16} /> Add to Logic Map</button>
                             </div>
                         </div>
                     </div>
@@ -518,71 +365,34 @@ const App: React.FC = () => {
         
         {/* MEDIA PLAYER FOOTER */}
         <div className="fixed bottom-0 left-0 right-0 h-24 bg-white border-t border-slate-200 flex flex-col z-[60] shadow-2xl">
-            {/* Hidden Video element for HLS processing */}
-            <video 
-              ref={videoRef} 
-              className="hidden" 
-              onTimeUpdate={handleTimeUpdate} 
-              onLoadedMetadata={handleLoadedMetadata}
-            />
-            
-            {/* Progress Bar */}
-            <div 
-              className="w-full h-1.5 bg-slate-100 cursor-pointer relative group"
-              onClick={(e) => {
+            <video ref={videoRef} className="hidden" onTimeUpdate={handleTimeUpdate} onLoadedMetadata={handleLoadedMetadata} />
+            <div className="w-full h-1.5 bg-slate-100 cursor-pointer relative group" onClick={(e) => {
                 const rect = e.currentTarget.getBoundingClientRect();
                 const pos = (e.clientX - rect.left) / rect.width;
                 if (videoRef.current) videoRef.current.currentTime = pos * duration;
-              }}
-            >
-                <div 
-                  className="h-full bg-indigo-600 relative transition-all"
-                  style={{ width: `${(currentTime / duration) * 100}%` }}
-                >
+              }}>
+                <div className="h-full bg-indigo-600 relative transition-all" style={{ width: `${isNaN(currentTime / duration) ? 0 : (currentTime / duration) * 100}%` }}>
                     <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 bg-indigo-600 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 </div>
             </div>
-
             <div className="flex-1 flex items-center justify-between px-6">
-                {/* Left: Shiur Info */}
                 <div className="flex items-center gap-4 w-1/4">
-                    <div className="w-12 h-12 bg-slate-900 rounded-lg flex items-center justify-center text-amber-500 font-bold text-lg shadow-sm">ש</div>
-                    <div>
-                        <div className="text-sm font-bold text-slate-900 line-clamp-1">{currentSugya.title}</div>
-                        <div className="text-[10px] font-bold text-stone-400 uppercase tracking-widest flex items-center gap-1">
-                           <User size={10} /> R Dovid Sackton
-                        </div>
-                    </div>
+                    <div className="w-12 h-12 bg-slate-900 rounded-lg flex items-center justify-center text-amber-500 font-bold text-lg">ש</div>
+                    <div><div className="text-sm font-bold text-slate-900 line-clamp-1">{currentSugya.title}</div><div className="text-[10px] font-bold text-stone-400 uppercase tracking-widest flex items-center gap-1"><User size={10} /> R Dovid Sackton</div></div>
                 </div>
-
-                {/* Center: Controls */}
                 <div className="flex flex-col items-center gap-1">
                     <div className="flex items-center gap-8">
-                        <button onClick={() => videoRef.current && (videoRef.current.currentTime -= 10)} className="text-slate-400 hover:text-slate-900 transition-colors"><SkipBack size={20} /></button>
-                        <button 
-                            onClick={handlePlayPause}
-                            className="w-10 h-10 bg-slate-900 text-white rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-md"
-                        >
+                        <button onClick={() => videoRef.current && (videoRef.current.currentTime -= 10)} className="text-slate-400 hover:text-slate-900"><SkipBack size={20} /></button>
+                        <button onClick={handlePlayPause} className="w-10 h-10 bg-slate-900 text-white rounded-full flex items-center justify-center hover:scale-110 shadow-md">
                             {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" className="ml-1" />}
                         </button>
-                        <button onClick={() => videoRef.current && (videoRef.current.currentTime += 10)} className="text-slate-400 hover:text-slate-900 transition-colors"><SkipForward size={20} /></button>
+                        <button onClick={() => videoRef.current && (videoRef.current.currentTime += 10)} className="text-slate-400 hover:text-slate-900"><SkipForward size={20} /></button>
                     </div>
-                    <div className="text-[10px] font-mono text-slate-400 flex gap-1">
-                        <span className="text-slate-700">{formatTime(currentTime)}</span>
-                        <span>/</span>
-                        <span>{formatTime(duration)}</span>
-                    </div>
+                    <div className="text-[10px] font-mono text-slate-400 flex gap-1"><span>{formatTime(currentTime)}</span><span>/</span><span>{formatTime(duration)}</span></div>
                 </div>
-
-                {/* Right: Volume & Tools */}
                 <div className="flex items-center justify-end gap-6 w-1/4">
-                    <div className="flex items-center gap-2 group">
-                        <Volume2 size={18} className="text-slate-400 group-hover:text-slate-700" />
-                        <div className="w-20 h-1 bg-slate-200 rounded-full cursor-pointer relative">
-                             <div className="absolute inset-0 bg-slate-400 rounded-full w-3/4"></div>
-                        </div>
-                    </div>
-                    <button className="text-slate-400 hover:text-slate-700 transition-colors"><Maximize2 size={18} /></button>
+                    <div className="flex items-center gap-2"><Volume2 size={18} className="text-slate-400" /><div className="w-20 h-1 bg-slate-200 rounded-full"></div></div>
+                    <button className="text-slate-400"><Maximize2 size={18} /></button>
                 </div>
             </div>
         </div>
@@ -590,13 +400,13 @@ const App: React.FC = () => {
 
       {/* AI Slide-over */}
       {aiPanelOpen && (
-        <div className="fixed right-0 top-0 h-full w-96 bg-white shadow-2xl z-50 border-l border-slate-200 flex flex-col animate-in slide-in-from-right duration-300">
+        <div className="fixed right-0 top-0 h-full w-96 bg-white shadow-2xl z-50 border-l border-slate-200 flex flex-col animate-in slide-in-from-right">
              <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-indigo-50/50 to-white">
                  <h3 className="font-bold text-indigo-900 flex items-center gap-2 text-sm"><BrainCircuit className="text-indigo-600" size={18} />Chavrusa AI</h3>
-                 <button onClick={() => setAiPanelOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors"><X size={18} /></button>
+                 <button onClick={() => setAiPanelOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
              </div>
              <div className="p-6 flex-1 overflow-y-auto custom-scrollbar">
-                 {isLoadingAi ? <div className="space-y-4"><div className="h-2 bg-slate-100 rounded animate-pulse w-3/4"></div><div className="h-2 bg-slate-100 rounded animate-pulse"></div><div className="h-2 bg-slate-100 rounded animate-pulse w-5/6"></div><div className="h-2 bg-slate-100 rounded animate-pulse w-1/2"></div></div> : <div className="prose prose-sm prose-slate leading-relaxed"><div dangerouslySetInnerHTML={{ __html: aiContent.replace(/\n/g, '<br/>') }} /></div>}
+                 {isLoadingAi ? <div className="space-y-4 animate-pulse"><div className="h-2 bg-slate-100 rounded w-3/4"></div><div className="h-2 bg-slate-100 rounded"></div></div> : <div className="prose prose-sm prose-slate leading-relaxed"><div dangerouslySetInnerHTML={{ __html: aiContent.replace(/\n/g, '<br/>') }} /></div>}
              </div>
         </div>
       )}
