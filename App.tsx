@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MOCK_SUGYA, INITIAL_CONCEPTS, AVAILABLE_SUGYAS } from './constants';
-import { LogicNodeCard } from './components/LogicNodeCard';
 import { ConceptBadge } from './components/ConceptBadge';
 import { Whiteboard } from './components/Whiteboard';
 import { AnalysisDashboard } from './components/AnalysisDashboard';
@@ -203,6 +202,14 @@ const App: React.FC = () => {
             ? currentSugya.achronimPerspectives.find(p => p.id === activePerspectiveId) || currentSugya.achronimPerspectives[0]
             : null;
 
+  // --- MAIN RENDER ---
+
+  if (currentStage === StudyStage.SELECTOR) {
+      return (
+          <SugyaSelector onSelect={handleSwitchSugya} />
+      );
+  }
+
   return (
     <div className="flex h-screen w-screen overflow-hidden text-slate-800 font-sans bg-[#fdfbf7]">
       
@@ -233,12 +240,113 @@ const App: React.FC = () => {
                             <span className="text-[10px] font-bold uppercase tracking-wider">{viewMode === 'WHITEBOARD' ? 'Close Whiteboard' : 'Open Whiteboard'}</span>
                         </button>
                     </div>
-                    <div className="space-y-4">
-                        <div onClick={() => setCurrentStage(StudyStage.INTRO)} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all ${currentStage === StudyStage.INTRO ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}><FileText size={16} /><span>Sugya Intro</span></div>
-                        <div onClick={() => setCurrentStage(StudyStage.SOURCE_TEXT)} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all ${currentStage === StudyStage.SOURCE_TEXT ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}><BookOpen size={16} /><span>Sources</span></div>
-                        <div onClick={() => setCurrentStage(StudyStage.ANALYSIS)} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all ${currentStage === StudyStage.ANALYSIS ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}><Search size={16} /><span>Analysis</span></div>
-                        <div onClick={() => setCurrentStage(StudyStage.DEPTH_RISHONIM)} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all ${currentStage === StudyStage.DEPTH_RISHONIM ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}><Book size={16} /><span>Rishonim</span></div>
-                        <div onClick={() => setCurrentStage(StudyStage.PSAK)} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all ${currentStage === StudyStage.PSAK ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}><Gavel size={16} /><span>Psak Halacha</span></div>
+                    
+                    {/* RESTORED NAVIGATION MENU */}
+                    <div className="space-y-2">
+                        {/* Sugya Intro */}
+                        <div 
+                            onClick={() => setCurrentStage(StudyStage.INTRO)} 
+                            className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all ${currentStage === StudyStage.INTRO ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
+                        >
+                            <FileText size={16} />
+                            <span>Sugya Intro</span>
+                        </div>
+
+                        {/* Sources */}
+                        <div>
+                            <div 
+                                onClick={() => {
+                                    setCurrentStage(StudyStage.SOURCE_TEXT);
+                                    if (activeSource !== 'CHUMASH' && activeSource !== 'MISHNA' && activeSource !== 'GEMARA') setActiveSource('CHUMASH');
+                                }} 
+                                className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all ${currentStage === StudyStage.SOURCE_TEXT ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <BookOpen size={16} />
+                                    <span>Sources</span>
+                                </div>
+                                <ChevronDown size={14} className={`transition-transform ${currentStage === StudyStage.SOURCE_TEXT ? 'rotate-180' : ''}`} />
+                            </div>
+                            {currentStage === StudyStage.SOURCE_TEXT && (
+                                <div className="pl-9 space-y-1 mt-1 animate-in slide-in-from-top-2 duration-200">
+                                    <div onClick={() => handleSourceSelect('CHUMASH')} className={`text-xs py-1.5 px-2 rounded cursor-pointer transition-colors ${activeSource === 'CHUMASH' ? 'font-bold text-indigo-700 bg-indigo-50' : 'text-slate-500 hover:text-indigo-600'}`}>Chumash</div>
+                                    <div onClick={() => handleSourceSelect('MISHNA')} className={`text-xs py-1.5 px-2 rounded cursor-pointer transition-colors ${activeSource === 'MISHNA' ? 'font-bold text-indigo-700 bg-indigo-50' : 'text-slate-500 hover:text-indigo-600'}`}>Mishna</div>
+                                    <div onClick={() => handleSourceSelect('GEMARA')} className={`text-xs py-1.5 px-2 rounded cursor-pointer transition-colors ${activeSource === 'GEMARA' ? 'font-bold text-indigo-700 bg-indigo-50' : 'text-slate-500 hover:text-indigo-600'}`}>Gemara</div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Analysis */}
+                        <div>
+                            <div 
+                                onClick={() => setCurrentStage(StudyStage.ANALYSIS)} 
+                                className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all ${currentStage === StudyStage.ANALYSIS ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <Search size={16} />
+                                    <span>Analysis</span>
+                                </div>
+                                <ChevronDown size={14} className={`transition-transform ${currentStage === StudyStage.ANALYSIS ? 'rotate-180' : ''}`} />
+                            </div>
+                            {currentStage === StudyStage.ANALYSIS && (
+                                <div className="pl-9 space-y-1 mt-1 animate-in slide-in-from-top-2 duration-200">
+                                    <div onClick={() => handleAnalysisSelect('STRUCTURE')} className={`text-xs py-1.5 px-2 rounded cursor-pointer transition-colors ${analysisSection === 'STRUCTURE' ? 'font-bold text-indigo-700 bg-indigo-50' : 'text-slate-500 hover:text-indigo-600'}`}>Structure</div>
+                                    <div onClick={() => handleAnalysisSelect('LOGIC')} className={`text-xs py-1.5 px-2 rounded cursor-pointer transition-colors ${analysisSection === 'LOGIC' ? 'font-bold text-indigo-700 bg-indigo-50' : 'text-slate-500 hover:text-indigo-600'}`}>Logic</div>
+                                    <div onClick={() => handleAnalysisSelect('MELITZA')} className={`text-xs py-1.5 px-2 rounded cursor-pointer transition-colors ${analysisSection === 'MELITZA' ? 'font-bold text-indigo-700 bg-indigo-50' : 'text-slate-500 hover:text-indigo-600'}`}>Modern Examples</div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Rishonim */}
+                        <div>
+                            <div 
+                                onClick={() => setCurrentStage(StudyStage.DEPTH_RISHONIM)} 
+                                className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all ${currentStage === StudyStage.DEPTH_RISHONIM ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <Book size={16} />
+                                    <span>Rishonim</span>
+                                </div>
+                                <ChevronDown size={14} className={`transition-transform ${currentStage === StudyStage.DEPTH_RISHONIM ? 'rotate-180' : ''}`} />
+                            </div>
+                            {currentStage === StudyStage.DEPTH_RISHONIM && (
+                                <div className="pl-9 space-y-1 mt-1 animate-in slide-in-from-top-2 duration-200">
+                                    {currentSugya.perspectives.map(p => (
+                                        <div key={p.id} onClick={() => handleScholarSelect(StudyStage.DEPTH_RISHONIM, p.id)} className={`text-xs py-1.5 px-2 rounded cursor-pointer transition-colors ${activePerspectiveId === p.id ? 'font-bold text-indigo-700 bg-indigo-50' : 'text-slate-500 hover:text-indigo-600'}`}>{p.scholarName}</div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Achronim */}
+                        <div>
+                            <div 
+                                onClick={() => setCurrentStage(StudyStage.DEPTH_ACHRONIM)} 
+                                className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all ${currentStage === StudyStage.DEPTH_ACHRONIM ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <Layers size={16} />
+                                    <span>Achronim</span>
+                                </div>
+                                <ChevronDown size={14} className={`transition-transform ${currentStage === StudyStage.DEPTH_ACHRONIM ? 'rotate-180' : ''}`} />
+                            </div>
+                            {currentStage === StudyStage.DEPTH_ACHRONIM && (
+                                <div className="pl-9 space-y-1 mt-1 animate-in slide-in-from-top-2 duration-200">
+                                    {currentSugya.achronimPerspectives.map(p => (
+                                        <div key={p.id} onClick={() => handleScholarSelect(StudyStage.DEPTH_ACHRONIM, p.id)} className={`text-xs py-1.5 px-2 rounded cursor-pointer transition-colors ${activePerspectiveId === p.id ? 'font-bold text-indigo-700 bg-indigo-50' : 'text-slate-500 hover:text-indigo-600'}`}>{p.scholarName}</div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Psak */}
+                        <div 
+                            onClick={() => setCurrentStage(StudyStage.PSAK)} 
+                            className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all ${currentStage === StudyStage.PSAK ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
+                        >
+                            <Gavel size={16} />
+                            <span>Psak Halacha</span>
+                        </div>
                     </div>
                 </div>
             )}
@@ -287,7 +395,7 @@ const App: React.FC = () => {
                 </div>
 
                 {selectedNode && (
-                    <div className="fixed bottom-24 left-0 right-0 lg:left-80 bg-white border-t-2 border-slate-900 shadow-2xl z-40 flex flex-col" style={{ height: `${panelHeight}px` }}>
+                    <div className="fixed bottom-24 left-0 right-0 lg:left-72 bg-white border-t-2 border-slate-900 shadow-2xl z-[55] flex flex-col" style={{ height: `${panelHeight}px` }}>
                         <div className="h-3 w-full bg-slate-100 border-b border-slate-200 cursor-ns-resize flex items-center justify-center" onMouseDown={startResize}><GripHorizontal size={16} className="text-slate-400" /></div>
                         <div className="h-12 border-b border-slate-200 flex items-center justify-between px-6 bg-slate-50">
                              <div className="flex items-center gap-3">
@@ -327,8 +435,8 @@ const App: React.FC = () => {
              </div>
         )}
         
-        {/* MEDIA PLAYER FOOTER */}
-        <div className="fixed bottom-0 left-0 right-0 h-24 bg-white border-t border-slate-200 flex flex-col z-[60] shadow-2xl">
+        {/* MEDIA PLAYER FOOTER - High Z-Index & Fixed */}
+        <div className="fixed bottom-0 left-0 right-0 h-24 bg-white border-t border-slate-200 flex flex-col z-[60] shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)]">
             <video ref={videoRef} className="hidden" onTimeUpdate={handleTimeUpdate} onLoadedMetadata={handleLoadedMetadata} />
             <div className="w-full h-1.5 bg-slate-100 cursor-pointer relative group" onClick={(e) => {
                 const rect = e.currentTarget.getBoundingClientRect();
@@ -339,24 +447,32 @@ const App: React.FC = () => {
                     <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 bg-indigo-600 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 </div>
             </div>
-            <div className="flex-1 flex items-center justify-between px-6">
-                <div className="flex items-center gap-4 w-1/4">
-                    <div className="w-12 h-12 bg-slate-900 rounded-lg flex items-center justify-center text-amber-500 font-bold text-lg">ש</div>
-                    <div><div className="text-sm font-bold text-slate-900 line-clamp-1">{currentSugya.title}</div><div className="text-[10px] font-bold text-stone-400 uppercase tracking-widest flex items-center gap-1"><User size={10} /> R Dovid Sackton</div></div>
-                </div>
-                <div className="flex flex-col items-center gap-1">
-                    <div className="flex items-center gap-8">
-                        <button onClick={() => videoRef.current && (videoRef.current.currentTime -= 10)} className="text-slate-400 hover:text-slate-900"><SkipBack size={20} /></button>
-                        <button onClick={handlePlayPause} className="w-10 h-10 bg-slate-900 text-white rounded-full flex items-center justify-center hover:scale-110 shadow-md">
-                            {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" className="ml-1" />}
-                        </button>
-                        <button onClick={() => videoRef.current && (videoRef.current.currentTime += 10)} className="text-slate-400 hover:text-slate-900"><SkipForward size={20} /></button>
+            <div className="flex-1 flex items-center justify-between px-4 md:px-6">
+                <div className="flex items-center gap-3 md:gap-4 w-1/3">
+                    <div className="w-10 h-10 md:w-12 md:h-12 bg-slate-900 rounded-lg flex items-center justify-center text-amber-500 font-bold text-lg flex-shrink-0">ש</div>
+                    <div className="min-w-0">
+                        <div className="text-xs md:text-sm font-bold text-slate-900 truncate">{currentSugya.title}</div>
+                        <div className="text-[9px] md:text-[10px] font-bold text-stone-400 uppercase tracking-widest flex items-center gap-1"><User size={10} /> R Dovid Sackton</div>
                     </div>
-                    <div className="text-[10px] font-mono text-slate-400 flex gap-1"><span>{formatTime(currentTime)}</span><span>/</span><span>{formatTime(duration)}</span></div>
                 </div>
-                <div className="flex items-center justify-end gap-6 w-1/4">
-                    <div className="flex items-center gap-2"><Volume2 size={18} className="text-slate-400" /><div className="w-20 h-1 bg-slate-200 rounded-full"></div></div>
-                    <button className="text-slate-400"><Maximize2 size={18} /></button>
+                <div className="flex flex-col items-center gap-1 w-1/3">
+                    <div className="flex items-center gap-4 md:gap-8">
+                        <button onClick={() => videoRef.current && (videoRef.current.currentTime -= 10)} className="text-slate-400 hover:text-slate-900"><SkipBack size={18} /></button>
+                        <button onClick={handlePlayPause} className="w-9 h-9 md:w-10 md:h-10 bg-slate-900 text-white rounded-full flex items-center justify-center hover:scale-110 shadow-md">
+                            {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-0.5" />}
+                        </button>
+                        <button onClick={() => videoRef.current && (videoRef.current.currentTime += 10)} className="text-slate-400 hover:text-slate-900"><SkipForward size={18} /></button>
+                    </div>
+                    <div className="text-[9px] md:text-[10px] font-mono text-slate-400 flex gap-1"><span>{formatTime(currentTime)}</span><span>/</span><span>{formatTime(duration)}</span></div>
+                </div>
+                <div className="flex items-center justify-end gap-3 md:gap-6 w-1/3">
+                    <div className="hidden md:flex items-center gap-2">
+                        <Volume2 size={18} className="text-slate-400" />
+                        <div className="w-20 h-1 bg-slate-200 rounded-full overflow-hidden">
+                            <div className="h-full bg-slate-400 w-3/4"></div>
+                        </div>
+                    </div>
+                    <button className="text-slate-400 hover:text-slate-900"><Maximize2 size={18} /></button>
                 </div>
             </div>
         </div>
