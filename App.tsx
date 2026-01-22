@@ -13,12 +13,11 @@ import { SugyaSelector } from './components/SugyaSelector';
 import { LogicNode, Concept, StudyStage } from './types';
 import Hls from 'hls.js';
 import { 
-    BookOpen, Settings, BrainCircuit, X, ChevronRight, Layers, Book, 
+    BookOpen, Settings, X, ChevronRight, Layers, Book, 
     SidebarClose, SidebarOpen, ZoomIn, Map, Home, Lightbulb, ListTree, GripHorizontal,
     ChevronDown, Search, Gavel, FileText, Network, Sparkles, Workflow, ExternalLink, Video,
     Play, Pause, Volume2, SkipForward, SkipBack, Maximize2, User
 } from 'lucide-react';
-import { explainConcept, generateSugyaDeepData } from './services/geminiService';
 
 const App: React.FC = () => {
   // --- STATE ---
@@ -51,12 +50,6 @@ const App: React.FC = () => {
   const [duration, setDuration] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
-
-  // AI State
-  const [aiPanelOpen, setAiPanelOpen] = useState(false);
-  const [aiContent, setAiContent] = useState<string>("");
-  const [isLoadingAi, setIsLoadingAi] = useState(false);
-  const [isGeneratingDeepData, setIsGeneratingDeepData] = useState(false);
 
   // --- MEDIA PLAYER LOGIC ---
   useEffect(() => {
@@ -139,15 +132,6 @@ const App: React.FC = () => {
       setExpandedConceptId(expandedConceptId === concept.id ? null : concept.id);
   };
 
-  const handleConceptAi = async (concept: Concept) => {
-      setAiPanelOpen(true);
-      setAiContent("");
-      setIsLoadingAi(true);
-      const explanation = await explainConcept(concept.nameHebrew);
-      setAiContent(explanation);
-      setIsLoadingAi(false);
-  }
-
   const handleNodeSelect = (node: LogicNode) => {
       setSelectedNode(node);
       handleAddToWhiteboard(node);
@@ -185,21 +169,6 @@ const App: React.FC = () => {
           setActivePerspectiveId(list[newIndex].id);
       }
   };
-  
-  const handleGenerateDeepData = async () => {
-      setIsGeneratingDeepData(true);
-      const generated = await generateSugyaDeepData(currentSugya.title, currentSugya.baseText.englishText);
-      if (generated) {
-          setCurrentSugya(prev => ({
-              ...prev,
-              visualFlow: generated.visualFlow || prev.visualFlow,
-              modernAnalysis: generated.modernAnalysis || prev.modernAnalysis,
-              logicSystem: generated.logicSystem || prev.logicSystem,
-              analysis: generated.analysisComponents || prev.analysis
-          }));
-      }
-      setIsGeneratingDeepData(false);
-  }
 
   const startResize = (e: React.MouseEvent) => {
       e.preventDefault();
@@ -265,7 +234,6 @@ const App: React.FC = () => {
                             <span className="text-[10px] font-bold uppercase tracking-wider">{viewMode === 'WHITEBOARD' ? 'Close Whiteboard' : 'Open Whiteboard'}</span>
                         </button>
                     </div>
-                    {/* Simplified Sidebar Menu */}
                     <div className="space-y-4">
                         <div onClick={() => setCurrentStage(StudyStage.INTRO)} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all ${currentStage === StudyStage.INTRO ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}><FileText size={16} /><span>Sugya Intro</span></div>
                         <div onClick={() => setCurrentStage(StudyStage.SOURCE_TEXT)} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all ${currentStage === StudyStage.SOURCE_TEXT ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}><BookOpen size={16} /><span>Sources</span></div>
@@ -283,9 +251,6 @@ const App: React.FC = () => {
                             {expandedConceptId === c.id && (
                                 <div className="mt-2 p-3 bg-slate-50 rounded-lg border border-slate-200 animate-in slide-in-from-top-2">
                                     <p className="text-xs text-slate-600 leading-relaxed mb-3">{c.description}</p>
-                                    <button onClick={() => handleConceptAi(c)} className="w-full py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold rounded flex items-center justify-center gap-2">
-                                        <BrainCircuit size={12} /> Explain Concept
-                                    </button>
                                 </div>
                             )}
                         </div>
@@ -315,7 +280,7 @@ const App: React.FC = () => {
                 <div className="flex-1 overflow-y-auto p-0 w-full scroll-smooth" style={{ paddingBottom: selectedNode ? `${panelHeight}px` : '0px' }}>
                     {currentStage === StudyStage.INTRO && <ShearBlat onStart={() => { setCurrentStage(StudyStage.SOURCE_TEXT); setActiveSource('CHUMASH'); }} title={currentSugya.title} subtitle="Elucidated & Analyzed" resources={currentSugya.resources} />}
                     {currentStage === StudyStage.SOURCE_TEXT && <TzurasHadaf sugya={currentSugya} activeSource={activeSource} onAnalyze={handleNodeSelect} onSwitchSugya={handleSwitchSugya} availableSugyas={AVAILABLE_SUGYAS} />}
-                    {currentStage === StudyStage.ANALYSIS && <AnalysisDashboard sugya={currentSugya} section={analysisSection} onSelectNode={() => {}} onGenerateAi={handleGenerateDeepData} isGenerating={isGeneratingDeepData} />}
+                    {currentStage === StudyStage.ANALYSIS && <AnalysisDashboard sugya={currentSugya} section={analysisSection} onSelectNode={() => {}} />}
                     {currentStage === StudyStage.PSAK && <PsakView chain={currentSugya.psakChain} data={currentSugya.shulchanAruch} />}
                     {(currentStage === StudyStage.DEPTH_RISHONIM || currentStage === StudyStage.DEPTH_ACHRONIM) && activeScholar && (
                        <ScholarDepthView perspective={activeScholar} sourceText={currentSugya.baseText} category={currentStage === StudyStage.DEPTH_RISHONIM ? 'RISHONIM' : 'ACHRONIM'} onNavigate={handleScholarNavigation} onPlayTimestamp={jumpToTimestamp} />
@@ -397,19 +362,6 @@ const App: React.FC = () => {
             </div>
         </div>
       </main>
-
-      {/* AI Slide-over */}
-      {aiPanelOpen && (
-        <div className="fixed right-0 top-0 h-full w-96 bg-white shadow-2xl z-50 border-l border-slate-200 flex flex-col animate-in slide-in-from-right">
-             <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-indigo-50/50 to-white">
-                 <h3 className="font-bold text-indigo-900 flex items-center gap-2 text-sm"><BrainCircuit className="text-indigo-600" size={18} />Chavrusa AI</h3>
-                 <button onClick={() => setAiPanelOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
-             </div>
-             <div className="p-6 flex-1 overflow-y-auto custom-scrollbar">
-                 {isLoadingAi ? <div className="space-y-4 animate-pulse"><div className="h-2 bg-slate-100 rounded w-3/4"></div><div className="h-2 bg-slate-100 rounded"></div></div> : <div className="prose prose-sm prose-slate leading-relaxed"><div dangerouslySetInnerHTML={{ __html: aiContent.replace(/\n/g, '<br/>') }} /></div>}
-             </div>
-        </div>
-      )}
     </div>
   );
 };
