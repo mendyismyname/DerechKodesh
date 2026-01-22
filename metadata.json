@@ -1,0 +1,5 @@
+{
+  "name": "MySugya - Interactive Talmud Analysis",
+  "description": "A deep, interactive platform for analyzing Talmudic sugyas. Features step-by-step logic visualization, nested perspectives of Rishonim and Achronim, concept building blocks, and AI-powered insights.",
+  "requestFramePermissions": []
+}
